@@ -1,0 +1,11 @@
+[package]
+name = "unicode-korean-multitool"
+description = "A library to do some weird things with Korean syllables, based on how they are organized in Unicode"
+version = "0.1.0"
+authors = ["ylsun <y15un@y15un.dog>"]
+license = "MIT"
+edition = "2018"
+workspace = "../"
+
+[dependencies]
+num_enum = { version = "0.5" } # BSD-3-Clause

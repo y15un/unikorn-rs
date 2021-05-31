@@ -4,7 +4,7 @@ use unicode_korean_multitool::{Choseong, Jongseong, Syllable};
 // how to interpret (jongseong_a, choseong_b, jongseong_c, extended)
 // => when the current syllable has `jongseong_a` and the next syllable has 'choseong_b',
 //    replace the current syllable's jongseong with `jongseong_c`
-//    and replace the next syllable's choseong with `Choseong:Ieung`.
+//    and replace the next syllable's choseong with `Choseong::Ieung`.
 // => when `extended` is true, it's part of the extended ruleset, which violates
 //    pronunciation equivalence.
 const RULESET: [(Jongseong, Choseong, Jongseong, bool); 28] = [
@@ -132,7 +132,7 @@ pub fn pullup_choseong(source: &str) -> String {
     pullup_choseong_config(source, false)
 }
 
-pub fn pullup_choseong_config(source: &str, extended_rulset: bool) -> String {
+pub fn pullup_choseong_config(source: &str, extended_flag: bool) -> String {
     let mut destination = String::with_capacity(source.len());
 
     let mut buffer: [u8; 4] = [0, 0, 0, 0];
@@ -163,12 +163,12 @@ pub fn pullup_choseong_config(source: &str, extended_rulset: bool) -> String {
                 current_jongseong_match,
                 next_choseong_match,
                 current_jongseong_to_be,
-                extended,
+                is_extended,
             ) in RULESET.iter()
             {
                 if current_jongseong_match == current_syllable.jongseong
                     && next_choseong_match == next_syllable.choseong
-                    && (extended <= extended_rulset)
+                    && (is_extended <= extended_flag)
                 {
                     current_syllable.jongseong = current_jongseong_to_be;
                     choseong_pulled = true;

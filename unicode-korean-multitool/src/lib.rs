@@ -1,5 +1,10 @@
-//! This crate contains somewhat useful/useless functions you can use to mess with Korean
-//! characters in modern Korean alphabet (현대한글).
+//! This crate provides ways to manipulate modern Korean alphabet (현대한글, Hyeondae Hangeul).
+//!
+//! More specifically, you can:
+//! * Decompose a Precomposed Korean [`Syllable`] into individual
+//!   consonants and vowels (자모, Jamo), and
+//! * Do the reverse of above action, i.e., compose a set of individual consonants and vowels into
+//!   a Precomposed Korean Syllable.
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{
     convert::TryFrom,
@@ -7,8 +12,8 @@ use std::{
     fmt::{Display, Formatter, Result as FmtResult},
 };
 
-/// Groups all the consonants that can be placed in the 'choseong' (initial consonant) position of
-/// a Korean syllable in modern Korean alphabet.
+/// Groups all the consonants applicable to the initial consonant (초성, Choseong) position of a
+/// Korean syllable.
 #[derive(Clone, Copy, Debug, Eq, IntoPrimitive, Ord, PartialEq, PartialOrd, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Choseong {
@@ -52,31 +57,29 @@ pub enum Choseong {
     Hieuh,
 }
 
-/// Contains all the possible error conditions that can happen within this crate.
+/// Contains all the possible error conditions that can arise within this crate.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
-    /// Denotes that a [`char`] outside the Unified Korean Syllables range (U+AC00 '가' -- U+D7A3 '힣') has
-    /// been tried converting into [`Syllable`].
-    NonKorean,
+    /// Denotes that a [`char`] outside the Precomposed Korean Syllables range (U+AC00 '가' --
+    /// U+D7A3 '힣') was tried converting into a [`Syllable`].
+    NonKorean(char),
 }
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
         match self {
-            Self::NonKorean => write!(f, "Given character is not Korean"),
+            Self::NonKorean(coi) => write!(f, "'{}' is not a Precomposed Korean Sylable", coi),
         }
     }
 }
 impl StdError for Error {}
 
-/// Groups all the consonants (including clustered consonants) that can be placed in the
-/// 'jongseong' (final consonant) position of a Korean syllable in modern Korean alphabet.
+/// Groups all the consonants (including clustered consonants) applicable to the final consonants
+/// (종성, Jongseong) position of a Korean syllable.
 #[derive(Clone, Copy, Debug, Eq, IntoPrimitive, Ord, PartialEq, PartialOrd, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Jongseong {
-    /// Denotes that there's nothing in the jongseong position.
-    Empty,
     /// Represents 'ㄱ'.
-    Kiyeok,
+    Kiyeok = 1,
     /// Represents 'ㄲ'.
     SsangKiyeok,
     /// Represents 'ㄳ'.
@@ -131,8 +134,8 @@ pub enum Jongseong {
     Hieuh,
 }
 
-/// Groups all the vowels available for 'jungseong' (medial vowel) position of a Korean syllable
-/// in modern Korean alphabet.
+/// Groups all the vowels applicable to the medial vowel (중성, Jungseong) position of a Korean
+/// syllable.
 #[derive(Clone, Copy, Debug, Eq, IntoPrimitive, Ord, PartialEq, PartialOrd, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Jungseong {
@@ -180,7 +183,7 @@ pub enum Jungseong {
     I,
 }
 
-/// Represents a single Korean syllable.
+/// Represents a Korean syllable.
 ///
 /// Most of the time, all you need to do is calling [`Syllable::try_from`] with [`char`]
 /// (that contains a valid Korean syllable) as its argument:
@@ -191,13 +194,18 @@ pub enum Jungseong {
 /// let syllable = Syllable::try_from('잌').unwrap();
 /// assert_eq!(syllable.choseong, Choseong::Ieung);
 /// assert_eq!(syllable.jungseong, Jungseong::I);
-/// assert_eq!(syllable.jongseong, Jongseong::Khieukh);
+/// assert_eq!(syllable.jongseong, Some(Jongseong::Khieukh));
+///
+/// let syllable = Syllable::try_from('뭐').unwrap();
+/// assert_eq!(syllable.choseong, Choseong::Mieum);
+/// assert_eq!(syllable.jungseong, Jungseong::Weo);
+/// assert_eq!(syllable.jongseong, None);
 /// ```
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Syllable {
     pub choseong: Choseong,
     pub jungseong: Jungseong,
-    pub jongseong: Jongseong,
+    pub jongseong: Option<Jongseong>,
 }
 impl From<Syllable> for char {
     fn from(syllable: Syllable) -> char {
@@ -208,7 +216,11 @@ impl From<Syllable> for char {
             0xAC00
                 + (syllable.choseong as u32 * 21 * 28)
                 + (syllable.jungseong as u32 * 28)
-                + syllable.jongseong as u32,
+                + if let Some(jongseong) = syllable.jongseong {
+                    jongseong as u32
+                } else {
+                    0
+                },
         )
         .unwrap()
     }
@@ -218,7 +230,7 @@ impl TryFrom<char> for Syllable {
 
     fn try_from(character: char) -> Result<Self, Self::Error> {
         if !Self::is_one_of_us(character) {
-            return Err(Error::NonKorean);
+            return Err(Error::NonKorean(character));
         }
 
         // all unified korean syllables are within BMP, so in this context, it is safe to assume:
@@ -234,12 +246,12 @@ impl TryFrom<char> for Syllable {
         Ok(Self {
             choseong: Choseong::try_from(choseong as u8).unwrap(),
             jungseong: Jungseong::try_from(jungseong as u8).unwrap(),
-            jongseong: Jongseong::try_from(jongseong as u8).unwrap(),
+            jongseong: Jongseong::try_from(jongseong as u8).ok(),
         })
     }
 }
 impl Syllable {
-    /// Determines if a given [`char`] is a valid Korean syllable.
+    /// Determines if a given [`char`] is one of the 11,172 valid modern Korean syllables.
     pub fn is_one_of_us(character: char) -> bool {
         // all unified korean syllables are within BMP, so in this context, it is safe to assume:
         //     Unicode Scalar Value == Unicode Code Point
@@ -260,7 +272,7 @@ mod tests {
             char::from(Syllable {
                 choseong: Choseong::Ieung,
                 jungseong: Jungseong::I,
-                jongseong: Jongseong::Rieul,
+                jongseong: Some(Jongseong::Rieul),
             }),
             '일'
         );
@@ -268,31 +280,49 @@ mod tests {
             char::from(Syllable {
                 choseong: Choseong::Sios,
                 jungseong: Jungseong::Eo,
-                jongseong: Jongseong::Nieun,
+                jongseong: Some(Jongseong::Nieun),
             }),
             '선'
+        );
+
+        assert_eq!(
+            char::from(Syllable {
+                choseong: Choseong::Kiyeok,
+                jungseong: Jungseong::Ae,
+                jongseong: None,
+            }),
+            '개'
         );
     }
 
     #[test]
     fn test_tryfrom_char_for_syllable() {
-        assert_eq!(Syllable::try_from('@'), Err(Error::NonKorean));
-        assert_eq!(Syllable::try_from('E'), Err(Error::NonKorean));
-        assert_eq!(Syllable::try_from('𝄞'), Err(Error::NonKorean));
+        assert_eq!(Syllable::try_from('@'), Err(Error::NonKorean('@')));
+        assert_eq!(Syllable::try_from('E'), Err(Error::NonKorean('E')));
+        assert_eq!(Syllable::try_from('𝄞'), Err(Error::NonKorean('𝄞')));
+
         assert_eq!(
-            Syllable::try_from('영'),
+            Syllable::try_from('고'),
             Ok(Syllable {
-                choseong: Choseong::Ieung,
-                jungseong: Jungseong::Yeo,
-                jongseong: Jongseong::Ieung,
+                choseong: Choseong::Kiyeok,
+                jungseong: Jungseong::O,
+                jongseong: None,
             })
         );
         assert_eq!(
-            Syllable::try_from('선'),
+            Syllable::try_from('양'),
             Ok(Syllable {
-                choseong: Choseong::Sios,
-                jungseong: Jungseong::Eo,
-                jongseong: Jongseong::Nieun,
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::Ya,
+                jongseong: Some(Jongseong::Ieung),
+            })
+        );
+        assert_eq!(
+            Syllable::try_from('이'),
+            Ok(Syllable {
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::I,
+                jongseong: None,
             })
         );
     }

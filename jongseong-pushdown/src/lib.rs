@@ -6,7 +6,7 @@ use unicode_korean_multitool::{Choseong, Jongseong, Jungseong, Syllable};
 //    replace the current syllable's jongseong with `jongseong_b`
 //    and replace the next syllable's choseong with `choseong_c`.
 // => when `extended` is true, it's part of the extended ruleset, which violates
-//    pronunciation equivalence.
+//    phonetic equivalence.
 //
 // additional extended ruleset:
 //     if the current syllable has either `Jongseong::Tikeut` or `Jongseong::Thikeuth`,
@@ -19,118 +19,88 @@ use unicode_korean_multitool::{Choseong, Jongseong, Jungseong, Syllable};
 //     * Jungseong::Yu,
 //     * Jungseong::I,
 //     then only apply jongseong pushdown if and only if extended rulset is active.
-const RULESET: [(Jongseong, Jongseong, Choseong, bool); 26] = [
-    (Jongseong::Kiyeok, Jongseong::Empty, Choseong::Kiyeok, false),
-    (
-        Jongseong::SsangKiyeok,
-        Jongseong::Empty,
-        Choseong::SsangKiyeok,
-        false,
-    ),
+const RULESET: [(Jongseong, Option<Jongseong>, Choseong, bool); 26] = [
+    (Jongseong::Kiyeok, None, Choseong::Kiyeok, false),
+    (Jongseong::SsangKiyeok, None, Choseong::SsangKiyeok, false),
     (
         Jongseong::KiyeokSios,
-        Jongseong::Kiyeok,
+        Some(Jongseong::Kiyeok),
         Choseong::Sios,
         false,
     ),
-    (Jongseong::Nieun, Jongseong::Empty, Choseong::Nieun, false),
+    (Jongseong::Nieun, None, Choseong::Nieun, false),
     (
         Jongseong::NieunCieuc,
-        Jongseong::Nieun,
+        Some(Jongseong::Nieun),
         Choseong::Cieuc,
         false,
     ),
     (
         Jongseong::NieunHieuh,
-        Jongseong::Nieun,
+        Some(Jongseong::Nieun),
         Choseong::Hieuh,
         true,
     ),
-    (Jongseong::Tikeut, Jongseong::Empty, Choseong::Tikeut, false),
-    (Jongseong::Rieul, Jongseong::Empty, Choseong::Rieul, false),
+    (Jongseong::Tikeut, None, Choseong::Tikeut, false),
+    (Jongseong::Rieul, None, Choseong::Rieul, false),
     (
         Jongseong::RieulKiyeok,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Kiyeok,
         false,
     ),
     (
         Jongseong::RieulMieum,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Mieum,
         false,
     ),
     (
         Jongseong::RieulPieup,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Pieup,
         false,
     ),
     (
         Jongseong::RieulSios,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Sios,
         false,
     ),
     (
         Jongseong::RieulThieuth,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Thieuth,
         false,
     ),
     (
         Jongseong::RieulPhieuph,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Phieuph,
         false,
     ),
     (
         Jongseong::RieulHieuh,
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Hieuh,
         true,
     ),
-    (Jongseong::Mieum, Jongseong::Empty, Choseong::Mieum, false),
-    (Jongseong::Pieup, Jongseong::Empty, Choseong::Pieup, false),
+    (Jongseong::Mieum, None, Choseong::Mieum, false),
+    (Jongseong::Pieup, None, Choseong::Pieup, false),
     (
         Jongseong::PieupSios,
-        Jongseong::Pieup,
+        Some(Jongseong::Pieup),
         Choseong::Sios,
         false,
     ),
-    (Jongseong::Sios, Jongseong::Empty, Choseong::Sios, false),
-    (
-        Jongseong::SsangSios,
-        Jongseong::Empty,
-        Choseong::SsangSios,
-        false,
-    ),
-    (Jongseong::Cieuc, Jongseong::Empty, Choseong::Cieuc, false),
-    (
-        Jongseong::Chieuch,
-        Jongseong::Empty,
-        Choseong::Chieuch,
-        false,
-    ),
-    (
-        Jongseong::Khieukh,
-        Jongseong::Empty,
-        Choseong::Khieukh,
-        false,
-    ),
-    (
-        Jongseong::Thieuth,
-        Jongseong::Empty,
-        Choseong::Thieuth,
-        false,
-    ),
-    (
-        Jongseong::Phieuph,
-        Jongseong::Empty,
-        Choseong::Phieuph,
-        false,
-    ),
-    (Jongseong::Hieuh, Jongseong::Empty, Choseong::Hieuh, true),
+    (Jongseong::Sios, None, Choseong::Sios, false),
+    (Jongseong::SsangSios, None, Choseong::SsangSios, false),
+    (Jongseong::Cieuc, None, Choseong::Cieuc, false),
+    (Jongseong::Chieuch, None, Choseong::Chieuch, false),
+    (Jongseong::Khieukh, None, Choseong::Khieukh, false),
+    (Jongseong::Thieuth, None, Choseong::Thieuth, false),
+    (Jongseong::Phieuph, None, Choseong::Phieuph, false),
+    (Jongseong::Hieuh, None, Choseong::Hieuh, true),
 ];
 
 pub fn pushdown_jongseong(source: &str) -> String {
@@ -164,7 +134,8 @@ pub fn pushdown_jongseong_config(source: &str, extended_flag: bool) -> String {
             let next_syllable = Syllable::try_from(next).unwrap();
 
             // additional extended ruleset check
-            if !([Jongseong::Tikeut, Jongseong::Thieuth].contains(&current_syllable.jongseong)
+            if !([Some(Jongseong::Tikeut), Some(Jongseong::Thieuth)]
+                .contains(&current_syllable.jongseong)
                 && [
                     Jungseong::Ya,
                     Jungseong::Yae,
@@ -184,7 +155,7 @@ pub fn pushdown_jongseong_config(source: &str, extended_flag: bool) -> String {
                     is_extended,
                 ) in RULESET.iter()
                 {
-                    if current_jongseong_match == current_syllable.jongseong
+                    if Some(current_jongseong_match) == current_syllable.jongseong
                         && Choseong::Ieung == next_syllable.choseong
                         && (is_extended <= extended_flag)
                     {

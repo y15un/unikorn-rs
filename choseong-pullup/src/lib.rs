@@ -6,126 +6,101 @@ use unicode_korean_multitool::{Choseong, Jongseong, Syllable};
 //    replace the current syllable's jongseong with `jongseong_c`
 //    and replace the next syllable's choseong with `Choseong::Ieung`.
 // => when `extended` is true, it's part of the extended ruleset, which violates
-//    pronunciation equivalence.
-const RULESET: [(Jongseong, Choseong, Jongseong, bool); 28] = [
-    (Jongseong::Empty, Choseong::Kiyeok, Jongseong::Kiyeok, false),
+//    phonetic equivalence.
+const RULESET: [(Option<Jongseong>, Choseong, Jongseong, bool); 28] = [
+    (None, Choseong::Kiyeok, Jongseong::Kiyeok, false),
+    (None, Choseong::SsangKiyeok, Jongseong::SsangKiyeok, false),
+    (None, Choseong::Nieun, Jongseong::Nieun, false),
+    (None, Choseong::Tikeut, Jongseong::Tikeut, false),
+    (None, Choseong::Rieul, Jongseong::Rieul, false),
+    (None, Choseong::Mieum, Jongseong::Mieum, false),
+    (None, Choseong::Pieup, Jongseong::Pieup, false),
+    (None, Choseong::Sios, Jongseong::Sios, false),
+    (None, Choseong::SsangSios, Jongseong::SsangSios, false),
+    (None, Choseong::Cieuc, Jongseong::Cieuc, false),
+    (None, Choseong::Chieuch, Jongseong::Chieuch, false),
+    (None, Choseong::Khieukh, Jongseong::Khieukh, false),
+    (None, Choseong::Thieuth, Jongseong::Thieuth, false),
+    (None, Choseong::Phieuph, Jongseong::Phieuph, false),
+    (None, Choseong::Hieuh, Jongseong::Hieuh, true),
     (
-        Jongseong::Empty,
-        Choseong::SsangKiyeok,
-        Jongseong::SsangKiyeok,
-        false,
-    ),
-    (Jongseong::Empty, Choseong::Nieun, Jongseong::Nieun, false),
-    (Jongseong::Empty, Choseong::Tikeut, Jongseong::Tikeut, false),
-    (Jongseong::Empty, Choseong::Rieul, Jongseong::Rieul, false),
-    (Jongseong::Empty, Choseong::Mieum, Jongseong::Mieum, false),
-    (Jongseong::Empty, Choseong::Pieup, Jongseong::Pieup, false),
-    (Jongseong::Empty, Choseong::Sios, Jongseong::Sios, false),
-    (
-        Jongseong::Empty,
-        Choseong::SsangSios,
-        Jongseong::SsangSios,
-        false,
-    ),
-    (Jongseong::Empty, Choseong::Cieuc, Jongseong::Cieuc, false),
-    (
-        Jongseong::Empty,
-        Choseong::Chieuch,
-        Jongseong::Chieuch,
-        false,
-    ),
-    (
-        Jongseong::Empty,
-        Choseong::Khieukh,
-        Jongseong::Khieukh,
-        false,
-    ),
-    (
-        Jongseong::Empty,
-        Choseong::Thieuth,
-        Jongseong::Thieuth,
-        false,
-    ),
-    (
-        Jongseong::Empty,
-        Choseong::Phieuph,
-        Jongseong::Phieuph,
-        false,
-    ),
-    (Jongseong::Empty, Choseong::Hieuh, Jongseong::Hieuh, true),
-    (
-        Jongseong::Kiyeok,
+        Some(Jongseong::Kiyeok),
         Choseong::Kiyeok,
         Jongseong::SsangKiyeok,
         true,
     ),
     (
-        Jongseong::Kiyeok,
+        Some(Jongseong::Kiyeok),
         Choseong::Sios,
         Jongseong::KiyeokSios,
         false,
     ),
     (
-        Jongseong::Nieun,
+        Some(Jongseong::Nieun),
         Choseong::Cieuc,
         Jongseong::NieunCieuc,
         false,
     ),
     (
-        Jongseong::Nieun,
+        Some(Jongseong::Nieun),
         Choseong::Hieuh,
         Jongseong::NieunHieuh,
         true,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Kiyeok,
         Jongseong::RieulKiyeok,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Mieum,
         Jongseong::RieulMieum,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Pieup,
         Jongseong::RieulPieup,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Sios,
         Jongseong::RieulSios,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Thieuth,
         Jongseong::RieulThieuth,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Phieuph,
         Jongseong::RieulPhieuph,
         false,
     ),
     (
-        Jongseong::Rieul,
+        Some(Jongseong::Rieul),
         Choseong::Hieuh,
         Jongseong::RieulHieuh,
         true,
     ),
     (
-        Jongseong::Pieup,
+        Some(Jongseong::Pieup),
         Choseong::Sios,
         Jongseong::PieupSios,
         false,
     ),
-    (Jongseong::Sios, Choseong::Sios, Jongseong::SsangSios, true),
+    (
+        Some(Jongseong::Sios),
+        Choseong::Sios,
+        Jongseong::SsangSios,
+        true,
+    ),
 ];
 
 pub fn pullup_choseong(source: &str) -> String {
@@ -135,13 +110,12 @@ pub fn pullup_choseong(source: &str) -> String {
 pub fn pullup_choseong_config(source: &str, extended_flag: bool) -> String {
     let mut destination = String::with_capacity(source.len());
 
-    let mut buffer: [u8; 4] = [0, 0, 0, 0];
     let mut characters = source.chars().peekable();
     let mut choseong_pulled = false;
 
     while let Some(current) = characters.next() {
         if !Syllable::is_one_of_us(current) {
-            destination.push_str(current.encode_utf8(&mut buffer));
+            destination.push(current);
 
             continue;
         }
@@ -153,7 +127,7 @@ pub fn pullup_choseong_config(source: &str, extended_flag: bool) -> String {
 
         if let Some(&next) = characters.peek() {
             if !Syllable::is_one_of_us(next) {
-                destination.push_str(char::from(current_syllable).encode_utf8(&mut buffer));
+                destination.push(char::from(current_syllable));
 
                 continue;
             }
@@ -170,7 +144,7 @@ pub fn pullup_choseong_config(source: &str, extended_flag: bool) -> String {
                     && next_choseong_match == next_syllable.choseong
                     && (is_extended <= extended_flag)
                 {
-                    current_syllable.jongseong = current_jongseong_to_be;
+                    current_syllable.jongseong = Some(current_jongseong_to_be);
                     choseong_pulled = true;
 
                     break;
@@ -178,7 +152,7 @@ pub fn pullup_choseong_config(source: &str, extended_flag: bool) -> String {
             }
         }
 
-        destination.push_str(char::from(current_syllable).encode_utf8(&mut buffer));
+        destination.push(char::from(current_syllable));
     }
 
     destination

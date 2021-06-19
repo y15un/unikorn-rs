@@ -4,8 +4,6 @@ use unicode_korean_multitool::Syllable;
 pub fn flip_chojongseong_horizontally(source: &str) -> String {
     let mut destination = String::with_capacity(source.len());
 
-    let mut buffer: [u8; 4] = [0, 0, 0, 0];
-
     let mut chojongseong = Vec::new();
     let mut jungseong = Vec::new();
     for character in source.chars() {
@@ -20,16 +18,13 @@ pub fn flip_chojongseong_horizontally(source: &str) -> String {
     for character in source.chars() {
         if Syllable::is_one_of_us(character) {
             let ((choseong, jongseong), jungseong) = flipped.next().unwrap();
-            destination.push_str(
-                char::from(Syllable {
-                    choseong,
-                    jungseong,
-                    jongseong,
-                })
-                .encode_utf8(&mut buffer),
-            );
+            destination.push(char::from(Syllable {
+                choseong,
+                jungseong,
+                jongseong,
+            }));
         } else {
-            destination.push_str(character.encode_utf8(&mut buffer));
+            destination.push(character);
         }
     }
 
@@ -55,10 +50,6 @@ mod tests {
         assert_eq!(
             super::flip_chojongseong_horizontally("두뇌 3000% 가동중"),
             "중됭 3000% 가노두".to_owned()
-        );
-        println!(
-            "{:?}",
-            super::flip_chojongseong_horizontally("초종성 수평뒤집기")
         );
     }
 }

@@ -1,7 +1,7 @@
 [package]
 name = "unicode-korean-multitool"
-description = "A library to do some weird things with Korean syllables, based on how they are organized in Unicode"
-version = "0.2.0"
+description = "A library providing ways to manipulate modern Korean alphabets"
+version = "0.2.1"
 authors = ["ylsun <y15un@y15un.dog>"]
 license = "MIT"
 edition = "2018"

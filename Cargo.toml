@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "a library for handling korean alphabets in unicode"
 authors = ["ylsun <y15un@y15un.dog>"]
 license = "MIT"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-num_enum = { version = "0.5" } # BSD-3-Clause
+num_enum = { version = "0.6" } # BSD-3-Clause
+
+[profile.release]
+codegen-units = 1
+lto = true

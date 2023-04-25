@@ -139,7 +139,7 @@ impl StdError for Error {}
 /// Most of the time, all you need to do is calling [`Jaeum::try_from`] with [`char`]
 /// (that contains a valid Korean syllable) as its argument:
 /// ```
-/// use crate::Jaeum;
+/// use unikorn::Jaeum;
 /// use std::convert::TryFrom;
 ///
 /// let jaeum = Jaeum::try_from('ㄳ').unwrap();
@@ -148,7 +148,7 @@ impl StdError for Error {}
 ///
 /// Also, you can convert [`Choseong`] and [`Jongseong`] from and into `Jaeum`:
 /// ```
-/// use crate::{Choseong, Error, Jaeum, Jongseong};
+/// use unikorn::{Choseong, Error, Jaeum, Jongseong};
 /// use std::convert::TryFrom;
 ///
 /// let choseong = Choseong::Rieul; // ㄹ
@@ -505,7 +505,7 @@ pub type Moeum = Jungseong;
 /// Most of the time, all you need to do is calling [`Syllable::try_from`] with [`char`]
 /// (that contains a valid Korean syllable) as its argument:
 /// ```
-/// use crate::{Choseong, Jungseong, Jongseong};
+/// use unikorn::{Choseong, Jungseong, Jongseong, Syllable};
 /// use std::convert::TryFrom;
 ///
 /// let syllable = Syllable::try_from('잌').unwrap();

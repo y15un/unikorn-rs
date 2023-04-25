@@ -543,6 +543,24 @@ impl From<(Choseong, Jungseong, Option<Jongseong>)> for Syllable {
         }
     }
 }
+impl From<(Jungseong, Option<Jongseong>)> for Syllable {
+    fn from((jungseong, jongseong): (Jungseong, Option<Jongseong>)) -> Self {
+        Self {
+            choseong: Choseong::Ieung,
+            jungseong,
+            jongseong,
+        }
+    }
+}
+impl From<Jungseong> for Syllable {
+    fn from(jungseong: Jungseong) -> Self {
+        Self {
+            choseong: Choseong::Ieung,
+            jungseong,
+            jongseong: None,
+        }
+    }
+}
 impl From<Syllable> for (Choseong, Jungseong, Option<Jongseong>) {
     fn from(syllable: Syllable) -> Self {
         (syllable.choseong, syllable.jungseong, syllable.jongseong)
@@ -764,6 +782,46 @@ mod tests {
                 jongseong: None,
             }
         )
+    }
+
+    #[test]
+    fn test_from_m_f_tuple_for_syllable() {
+        assert_eq!(
+            Syllable::from((Jungseong::Yo, None)),
+            Syllable {
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::Yo,
+                jongseong: None
+            }
+        );
+        assert_eq!(
+            Syllable::from((Jungseong::Ya, Some(Jongseong::Kiyeok))),
+            Syllable {
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::Ya,
+                jongseong: Some(Jongseong::Kiyeok),
+            }
+        )
+    }
+
+    #[test]
+    fn test_from_jungseong_for_syllable() {
+        assert_eq!(
+            Syllable::from(Jungseong::U),
+            Syllable {
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::U,
+                jongseong: None,
+            }
+        );
+        assert_eq!(
+            Syllable::from(Jungseong::Yu),
+            Syllable {
+                choseong: Choseong::Ieung,
+                jungseong: Jungseong::Yu,
+                jongseong: None,
+            }
+        );
     }
 
     #[test]

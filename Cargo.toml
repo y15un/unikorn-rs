@@ -7,7 +7,7 @@ license = "MIT"
 edition = "2021"
 
 [dependencies]
-num_enum = { version = "0.6" } # BSD-3-Clause
+num_enum = { version = "0.6" } # MIT
 
 [profile.release]
 codegen-units = 1

@@ -1,5 +1,5 @@
-# unicode-korean-multitool
-A library providing ways to manipulate modern Korean alphabets.
+# unikorn-rs
+a rust library for handling korean alphabets in unicode
 
 # Minimum Supported Rust Stable Version (MSRSV)
 Rust v1.52.0 and later.

@@ -1,2 +1,0 @@
-[workspace]
-members = ["choseong-pullup", "horizontal-chojongseong-flip", "jongseong-pushdown", "unicode-korean-multitool"]

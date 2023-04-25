@@ -618,8 +618,14 @@ mod tests {
 
     #[test]
     fn test_tryfrom_char_for_choseong() {
-        assert_eq!(Choseong::try_from('ㄵ'), Err(Error::NonJamo('ㄵ')));
-        assert_eq!(Choseong::try_from('ㄺ'), Err(Error::NonJamo('ㄺ')));
+        assert_eq!(
+            Choseong::try_from('ㄵ'),
+            Err(Error::NotApplicableToChoseong(Jaeum::NieunCieuc))
+        );
+        assert_eq!(
+            Choseong::try_from('ㄺ'),
+            Err(Error::NotApplicableToChoseong(Jaeum::RieulKiyeok))
+        );
 
         assert_eq!(Choseong::try_from('ㅈ'), Ok(Choseong::Cieuc));
         assert_eq!(Choseong::try_from('ㅅ'), Ok(Choseong::Sios));

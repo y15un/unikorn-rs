@@ -12,3 +12,7 @@ categories = ["text-processing"]
 
 [dependencies]
 num_enum = { version = "0.6" } # MIT
+
+[features]
+default = ["archaic-korean"] # temporarily enable by default for ease of development
+archaic-korean = []

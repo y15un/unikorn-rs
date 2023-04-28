@@ -1,10 +1,17 @@
 //! This crate provides ways to manipulate modern Korean alphabets (현대한글, Hyeondae Hangeul).
 //!
 //! More specifically, you can:
-//! * Decompose a Precomposed Korean [`Syllable`] into individual 'consonants and vowels' (자모,
-//!   Jamo), and
+//! * Decompose a Precomposed Korean (완성형, Wanseonghyeong) [`Syllable`] into individual
+//!   'consonants and vowels' (자모, Jamo), and
 //! * Do the reverse of above action, i.e., compose a set of individual consonants and vowels
 //!   into a Precomposed Korean Syllable.
+//!
+//! ## Features
+//! ### `archaic-korean`
+//! The `archaic-korean` feature enables handling archaic Korean alphabets (옛한글, Yet Hangeul),
+//! extending the behavior of this crate to include now-obsolete consosnants, consonant sequences,
+//! vowels, and vowel sequences into the [`Choseong`],[`Jungseong`], [`Jongseong`], and [`Jaeum`]
+//! enums, but in a limited way.
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{
     convert::TryFrom,

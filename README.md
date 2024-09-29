@@ -1,4 +1,5 @@
 # unikorn-rs
-a rust library for handling korean alphabets in unicode
+A library for computationally manipulating modern Korean alphabets
 
-for more information, please refer to https://docs.rs/unikorn.
+* https://crates.io/crates/unikorn
+* https://docs.rs/unikorn

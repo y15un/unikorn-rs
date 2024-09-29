@@ -3,16 +3,15 @@ name = "unikorn"
 version = "0.1.0"
 authors = ["ylsun <y15un@y15un.dog>"]
 edition = "2021"
-rust-version = "1.64.0"
-description = "a library for handling korean alphabets in unicode"
+rust-version = "1.70"
+description = "A library for computationally manipulating modern Korean alphabets"
 repository = "https://github.com/y15un/unikorn-rs"
-license = "MIT"
-keywords = ["korean", "language"]
+license = "MIT OR Apache-2.0"
+keywords = ["korean", "language", "unicode"]
 categories = ["text-processing"]
 
 [dependencies]
-num_enum = { version = "0.6" } # MIT
+num_enum = { version = "0.7" } # BSD-3-Caluse or MIT or Apache-2.0
 
 [features]
-default = ["archaic-korean"] # temporarily enable by default for ease of development
 archaic-korean = []

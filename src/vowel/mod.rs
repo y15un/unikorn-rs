@@ -7,6 +7,8 @@
 //!
 //! # Vowel Sequences
 //! Please refer to [`consonant`] module for details.
+//!
+//! [`consonant`]: crate::consonant
 mod jungseong;
 // mod moeum;
 

@@ -11,7 +11,7 @@
 //! For example, a Korean syllable `개` (U+AC1C, Hangul Syllable Gae) does not have final consonant, thus has the following only:
 //! * Initial consonant: `ᄀ` (U+1100, Hangul Choseong Kiyeok)
 //! * Median vowel: `ᅢ` (U+1162, Hangul Jungseong Ae)
-//! * (Final consonant: N/A)
+//! * (Final consonant: None)
 //!
 //! Note that the Unicode character name and the actual (i.e., practical) phonetic sound might have some discrepancies sometimes.
 //! Let's visit our previous example of `개` again: considering that the initial consonant Kiyeok, it would be considered *natural/intuitive* to be romanized as Kae, but in reality the National Institute of Korean Language defined its romanized version to be Gae. So it is advised to be aware of such possibilities.

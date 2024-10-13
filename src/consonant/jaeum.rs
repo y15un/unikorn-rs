@@ -468,3 +468,109 @@ impl TryFrom<Jongseong> for Jaeum {
         }
     }
 }
+impl Jaeum {
+    // TODO: consider exporting this array even when `archaic-korean` feature is not selected.
+    //       prob will require getting enum size at compile time kind of special magic thing.
+    #[cfg(feature = "archaic-korean")]
+    /// Lists `Jaeum` in correct dictionary order.
+    pub const IN_ORDER: [Jaeum; 64] = [
+        Jaeum::Kiyeok,
+        Jaeum::SsangKiyeok,
+        Jaeum::KiyeokSios,
+        Jaeum::Nieun,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SsangNieun,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::NieunTikeut,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::NieunSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::NieunPanSios,
+        Jaeum::NieunCieuc,
+        Jaeum::NieunHieuh,
+        Jaeum::Tikeut,
+        Jaeum::SsangTikeut,
+        Jaeum::Rieul,
+        Jaeum::RieulKiyeok,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::RieulKiyeokSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::RieulTikeut,
+        Jaeum::RieulMieum,
+        Jaeum::RieulPieup,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::RieulPieupSios,
+        Jaeum::RieulSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::RieulPanSios,
+        Jaeum::RieulThieuth,
+        Jaeum::RieulPhieuph,
+        Jaeum::RieulHieuh,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::RieulYeorinHieuh,
+        Jaeum::Mieum,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::MieumPieup,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::MieumSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::MieumPanSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::KapyeounMieum,
+        Jaeum::Pieup,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupKiyeok,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupTikeut,
+        Jaeum::SsangPieup,
+        Jaeum::PieupSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupSiosKiyeok,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupSiosTikeut,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupCieuc,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PieupThieuth,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::KapyeounPieup,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::KapyeounSsangPieup,
+        Jaeum::Sios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SiosKiyeok,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SiosNieun,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SiosTikeut,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SiosPieup,
+        Jaeum::SsangSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SiosCieuc,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::PanSios,
+        Jaeum::Ieung,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SsangIeung,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::YesIeung,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::YesIeungSios,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::YesIeungPanSios,
+        Jaeum::Cieuc,
+        Jaeum::SsangCieuc,
+        Jaeum::Chieuch,
+        Jaeum::Khieukh,
+        Jaeum::Thieuth,
+        Jaeum::Phieuph,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::KapyeounPhieuph,
+        Jaeum::Hieuh,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::SsangHieuh,
+        #[cfg(feature = "archaic-korean")]
+        Jaeum::YeorinHieuh,
+    ];
+}

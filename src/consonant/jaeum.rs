@@ -301,10 +301,12 @@ impl TryFrom<Choseong> for Jaeum {
     ///
     /// # Errors
     /// ## Without `archaic-korean` Feature
-    /// This operation is guaranteed  **infallible**.
+    /// This operation is guaranteed  [`Infallible`].
     ///
     /// ## With `archaic-korean` Feature
     /// * [`Error::NoUnicodeJaeumTryFromChoseong`]: the [`Choseong`] given does not have its [`Jaeum`]-equivalent in Unicode.
+    ///
+    /// [`Infallible`]: std::convert::Infallible
     fn try_from(value: Choseong) -> Result<Self, Self::Error> {
         match value {
             Choseong::Kiyeok => Ok(Self::Kiyeok),
@@ -409,10 +411,12 @@ impl TryFrom<Jongseong> for Jaeum {
     ///
     /// # Errors
     /// ## Without `archaic-korean` Feature
-    /// This operation is guaranteed  **infallible**.
+    /// This operation is guaranteed  [`Infallible`].
     ///
     /// ## With `archaic-korean` Feature
     /// * [`Error::NoUnicodeJaeumTryFromJongseong`]: the [`Jongseong`] given does not have its [`Jaeum`]-equivalent in Unicode.
+    ///
+    /// [`Infallible`]: std::convert::Infallible
     fn try_from(value: Jongseong) -> Result<Self, Self::Error> {
         match value {
             Jongseong::Kiyeok => Ok(Self::Kiyeok),

@@ -188,10 +188,12 @@ impl TryFrom<Choseong> for HalfwidthJaeum {
     ///
     /// # Errors
     /// ## Without `archaic-korean` Feature
-    /// This operation is guaranteed  **infallible**.
+    /// This operation is guaranteed  [`Infallible`].
     ///
     /// ## With `archaic-korean` Feature
     /// * [`Error::NoUnicodeHalfwidthJaeumTryFromChoseong`]: the [`Choseong`] given does not have its [`HalfwidthJaeum`]-equivalent in Unicode.
+    ///
+    /// [`Infallible`]: std::convert::Infallible
     fn try_from(value: Choseong) -> Result<Self, Self::Error> {
         // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
         match value {
@@ -245,16 +247,21 @@ impl TryFrom<Jaeum> for HalfwidthJaeum {
     ///
     /// # Errors
     /// ## Without `archaic-korean` Feature
-    /// This operation is guaranteed **infallible**.
+    /// This operation is guaranteed [`Infallible`].
     ///
     /// ## With `archaic-korean` Feature
     /// * [`Error::NoUnicodeHalfwidthJaeumTryFromJaeum`]: the [`Jaeum`] given does not have a valid [`HalfwidthJaeum`]-equivalent in Unicode.
+    ///
+    /// [`Infallible`]: std::convert::Infallible
     fn try_from(value: Jaeum) -> Result<Self, Self::Error> {
         // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
         let code_point = value as u32;
 
         match code_point {
             0x3131..=0x314E => Ok(Self::try_from(code_point + 0xCE70).unwrap()),
+            #[cfg(not(feature = "archaic-korean"))]
+            _ => unreachable!("This operation is infallible"),
+            #[cfg(feature = "archaic-korean")]
             _ => Err(Error::NoUnicodeHalfwidthJaeumTryFromJaeum(value)),
         }
     }
@@ -269,10 +276,12 @@ impl TryFrom<Jongseong> for HalfwidthJaeum {
     ///
     /// # Errors
     /// ## Without `archaic-korean` Feature
-    /// This operation is guaranteed **infallible**.
+    /// This operation is guaranteed [`Infallible`].
     ///
     /// ## With `archaic-korean` Feature
     /// * [`Error::NoUnicodeHalfwidthJaeumTryFromJongseong`]: the [`Jongseong`] given does not have a valid [`HalfwidthJaeum`]-equivalent in Unicode.
+    ///
+    /// [`Infallible`]: std::convert::Infallible
     fn try_from(value: Jongseong) -> Result<Self, Self::Error> {
         // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
         match value {

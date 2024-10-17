@@ -1,5 +1,6 @@
 use crate::{
     consonant::{Choseong, HalfwidthJaeum, Jaeum, Jongseong},
+    vowel::{Jungseong, Moeum},
 };
 use std::{
     error::Error as StdError,
@@ -19,6 +20,8 @@ pub enum Error {
     NonChoseongTryFromJongseong(Jongseong),
     /// The [`char`] given is not a valid halfwidth consonant.
     NonHalfwidthJaeumTryFromChar(char),
+    /// The [`char`] given is not a valid halfwidth vowel.
+    NonHalfwidthMoeumTryFromChar(char),
     /// The [`char`] given is not a valid consonant.
     NonJaeumTryFromChar(char),
     /// The [`char`] given is not valid as final consonant.
@@ -29,18 +32,28 @@ pub enum Error {
     NonJongseongTryFromHalfwidthJaeum(HalfwidthJaeum),
     /// The [`Jaeum`] given is not valid as final consonant.
     NonJongseongTryFromJaeum(Jaeum),
+    /// The [`char`] given is not valid as medial vowel.
+    NonJungseongTryFromChar(char),
     /// The `char` given is not a valid Korean syllable/alphabet/letter.
     NonKoreanTryFromChar(char),
+    /// The [`char`] given is not a valid vowel.
+    NonMoeumTryFromChar(char),
     /// The [`Choseong`] given does not have a valid [`HalfwidthJaeum`]-equivalent in Unicode.
     NoUnicodeHalfwidthJaeumTryFromChoseong(Choseong),
     /// The [`Jaeum`] given does not have a valid [`HalfwidthJaeum`]-equivalent in Unicode.
     NoUnicodeHalfwidthJaeumTryFromJaeum(Jaeum),
     /// The [`Jongseong`] given does not have a valid [`HalfwidthJaeum`]-equivalent in Unicode.
     NoUnicodeHalfwidthJaeumTryFromJongseong(Jongseong),
+    /// The [`Jungseong`] given does not have a valid [`HalfwidthMoeum`](crate::vowel::HalfwidthMoeum)-equivalent in Unicode.
+    NoUnicodeHalfwidthMoeumTryFromJungseong(Jungseong),
+    /// The [`Moeum`] given does not have a valid [`HalfwidthMoeum`](crate::vowel::HalfwidthMoeum)-equivalent in Unicode.
+    NoUnicodeHalfwidthMoeumTryFromMoeum(Moeum),
     /// The [`Choseong`] given does not have a valid [`Jaeum`]-equivalent in Unicode.
     NoUnicodeJaeumTryFromChoseong(Choseong),
     /// The [`Jongseong`] given does not have a valid [`Jaeum`]-equivalent in Unicode.
     NoUnicodeJaeumTryFromJongseong(Jongseong),
+    /// The [`Jungseong`] given does not have a valid [`Moeum`]-equivalent in Unicode.
+    NoUnicodeMoeumTryFromJungseong(Jungseong),
 }
 impl Debug for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
@@ -48,101 +61,135 @@ impl Debug for Error {
             Self::NonChoseongTryFromChar(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as initial consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as initial consonant",
+                    value, *value as u32
                 )
             }
             Self::NonChoseongTryFromHalfwidthJaeum(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as initial consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as initial consonant",
+                    value, *value as u32
                 )
             }
             Self::NonChoseongTryFromJaeum(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as initial consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as initial consonant",
+                    value, *value as u32
                 )
             }
             Self::NonChoseongTryFromJongseong(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as initial consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as initial consonant",
+                    value, *value as u32
                 )
             }
             Self::NonHalfwidthJaeumTryFromChar(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not a valid halfwidth consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not a valid halfwidth consonant",
+                    value, *value as u32
+                )
+            }
+            Self::NonHalfwidthMoeumTryFromChar(value) => {
+                write!(
+                    f,
+                    "{0:?} (U+{1:X}, '{0}') is not a valid halfwidth vowel",
+                    value, *value as u32
                 )
             }
             Self::NonJaeumTryFromChar(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not a valid consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not a valid consonant",
+                    value, *value as u32
                 )
             }
             Self::NonJongseongTryFromChar(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as final consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as final consonant",
+                    value, *value as u32
                 )
             }
             Self::NonJongseongTryFromChoseong(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as final consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as final consonant",
+                    value, *value as u32
                 )
             }
             Self::NonJongseongTryFromHalfwidthJaeum(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as final consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as final consonant",
+                    value, *value as u32
                 )
             }
             Self::NonJongseongTryFromJaeum(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not valid as final consonant",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not valid as final consonant",
+                    value, *value as u32
+                )
+            }
+            Self::NonJungseongTryFromChar(value) => {
+                write!(
+                    f,
+                    "{0:?} (U+{1:X}, '{0}') is not valid as medial vowel",
+                    value, *value as u32
                 )
             }
             Self::NonKoreanTryFromChar(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') is not a valid Korean syllable/alphabet/letter",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') is not a valid Korean syllable/alphabet/letter",
+                    value, *value as u32
+                )
+            }
+            Self::NonMoeumTryFromChar(value) => {
+                write!(
+                    f,
+                    "{0:?} (U+{1:X}, '{0}') is not a valid vowel",
+                    value, *value as u32
                 )
             }
             Self::NoUnicodeHalfwidthJaeumTryFromChoseong(value) => {
-                write!(f, "{:?} (U+{:X}, '{}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32, value)
+                write!(f, "{0:?} (U+{1:X}, '{0}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32)
             }
             Self::NoUnicodeHalfwidthJaeumTryFromJaeum(value) => {
-                write!(f, "{:?} (U+{:X}, '{}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32, value)
+                write!(f, "{0:?} (U+{1:X}, '{0}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32)
             }
             Self::NoUnicodeHalfwidthJaeumTryFromJongseong(value) => {
-                write!(f, "{:?} (U+{:X}, '{}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32, value)
+                write!(f, "{0:?} (U+{1:X}, '{0}') does not have valid Halfwidth Jaeum--equivalent in Unicode", value, *value as u32)
+            }
+            Self::NoUnicodeHalfwidthMoeumTryFromJungseong(value) => {
+                write!(f, "{0:?} (U+{1:X}, '{0}') does not have valid Halfwidth Moeum--equivalent in Unicode", value, *value as u32)
+            }
+            Self::NoUnicodeHalfwidthMoeumTryFromMoeum(value) => {
+                write!(f, "{0:?} (U+{1:X}, '{0}') does not have valid Halfwidth Moeum--equivalent in Unicode", value, *value as u32)
             }
             Self::NoUnicodeJaeumTryFromChoseong(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') does not have valid Jaeum-equivalent in Unicode",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') does not have valid Jaeum-equivalent in Unicode",
+                    value, *value as u32
                 )
             }
             Self::NoUnicodeJaeumTryFromJongseong(value) => {
                 write!(
                     f,
-                    "{:?} (U+{:X}, '{}') does not have valid Jaeum-equivalent in Unicode",
-                    value, *value as u32, value
+                    "{0:?} (U+{1:X}, '{0}') does not have valid Jaeum-equivalent in Unicode",
+                    value, *value as u32
+                )
+            }
+            Self::NoUnicodeMoeumTryFromJungseong(value) => {
+                write!(
+                    f,
+                    "{0:?} (U+{1:X}, '{0}') does not have valid Moeum-equivalent in Unicode",
+                    value, *value as u32
                 )
             }
         }
@@ -164,7 +211,10 @@ impl Display for Error {
                 write!(f, "'{}' is not valid as initial consonant", value)
             }
             Self::NonHalfwidthJaeumTryFromChar(value) => {
-                write!(f, "'{}' is not a valid consonant (halfwidth)", value)
+                write!(f, "'{}' is not a valid halfwidth consonant", value)
+            }
+            Self::NonHalfwidthMoeumTryFromChar(value) => {
+                write!(f, "'{}' is not a valid halfwidth vowel", value)
             }
             Self::NonJaeumTryFromChar(value) => {
                 write!(f, "'{}' is not a valid consonant", value)
@@ -181,12 +231,18 @@ impl Display for Error {
             Self::NonJongseongTryFromJaeum(value) => {
                 write!(f, "'{}' is not valid as final consonant", value)
             }
+            Self::NonJungseongTryFromChar(value) => {
+                write!(f, "'{}' is not valid as medial vowel", value)
+            }
             Self::NonKoreanTryFromChar(value) => {
                 write!(
                     f,
                     "'{}' is not a valid Korean syllable/alphabet/letter",
                     value
                 )
+            }
+            Self::NonMoeumTryFromChar(value) => {
+                write!(f, "'{}' is not a valid vowel", value)
             }
             Self::NoUnicodeHalfwidthJaeumTryFromChoseong(value) => {
                 write!(
@@ -209,6 +265,20 @@ impl Display for Error {
                     value
                 )
             }
+            Self::NoUnicodeHalfwidthMoeumTryFromJungseong(value) => {
+                write!(
+                    f,
+                    "'{}' does not have valid Halfwidth Moeum--equivalent in Unicode",
+                    value
+                )
+            }
+            Self::NoUnicodeHalfwidthMoeumTryFromMoeum(value) => {
+                write!(
+                    f,
+                    "'{}' does not have valid Halfwidth Moeum--equivalent in Unicode",
+                    value
+                )
+            }
             Self::NoUnicodeJaeumTryFromChoseong(value) => {
                 write!(
                     f,
@@ -220,6 +290,13 @@ impl Display for Error {
                 write!(
                     f,
                     "'{}' does not have valid Jaeum-equivalent in Unicode",
+                    value
+                )
+            }
+            Self::NoUnicodeMoeumTryFromJungseong(value) => {
+                write!(
+                    f,
+                    "'{}' does not have valid Moeum-equivalent in Unicode",
                     value
                 )
             }

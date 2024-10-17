@@ -9,8 +9,9 @@
 //! Please refer to [`consonant`] module for details.
 //!
 //! [`consonant`]: crate::consonant
+mod halfwidth;
 mod jungseong;
-// mod moeum;
+mod moeum;
 
 #[doc(inline)]
-pub use crate::vowel::jungseong::Jungseong;
+pub use crate::vowel::{halfwidth::HalfwidthMoeum, jungseong::Jungseong, moeum::Moeum};

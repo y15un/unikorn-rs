@@ -1,11 +1,14 @@
 use crate::{
-    consonant::{Jaeum, Jongseong},
+    consonant::{HalfwidthJaeum, Jaeum, Jongseong},
     Error,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    fmt::{Display, Formatter, Result as FmtResult},
+};
 
-/// A set of consonants applicable as initial consonant (초성, Choseong).
+/// A set of consonants valid as initial consonant (초성, Choseong).
 #[derive(Clone, Copy, Debug, Eq, IntoPrimitive, Ord, PartialEq, PartialOrd, TryFromPrimitive)]
 #[repr(u32)]
 pub enum Choseong {
@@ -363,19 +366,24 @@ pub enum Choseong {
     /// Represents *old* initial consonant `ꥼ` (U+A97C, Hangul Choseong SsangYeorinHieuh)
     SsangYeorinHieuh,
 }
+impl Display for Choseong {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(f, "{}", char::from(*self))
+    }
+}
 impl From<Choseong> for char {
     fn from(value: Choseong) -> Self {
         // guaranteed to not fail within BMP
-        char::from_u32(value.into()).unwrap()
+        char::from_u32(value as u32).unwrap()
     }
 }
 impl TryFrom<char> for Choseong {
     type Error = Error;
 
-    /// Tries to convert a [`char`] into `Choseong`.
+    /// Tries to convert a [`char`] into [`Choseong`].
     ///
     /// # Direct Conversion
-    /// The `char` given will be tested against the following range(s):
+    /// The [`char`] given will be tested against the following range(s):
     ///
     /// * Hangul Jamo / Initial consonants (U+1100--U+1112)
     /// * Hangul Jamo / Old initial consonants (U+1113--U+115E)
@@ -384,46 +392,72 @@ impl TryFrom<char> for Choseong {
     /// The latter two ranges are considered valid if and only if `archaic-korean` feature is enabled.
     ///
     /// # Indirect Conversion
-    /// For the following range(s), the `char` given will be tried converting into [`Jaeum`] first, then subsequently into `Choseong`:
+    /// ## Via [`Jaeum`] or [`HalfwidthJaeum`]
+    /// For the following range(s), the [`char`] given will be tried converting into [`Jaeum`] or [`HalfwidthJaeum`] accordingly first, then subsequently into [`Choseong`]:
     ///
-    /// * Hangul Jamo / Final consonants (U+11A8--U+11C2)
     /// * Hangul Compatibility Jamo / Consonant letters (U+3131--U+314E)
     /// * Halfwidth and Fullwidth Forms / Halfwidth Hangul variants (U+FFA1--U+FFBE)
-    /// * Hangul Jamo / Old final consonants (U+11C3--U+11FF)
     /// * Hangul Compatibility Jamo / Old consonant letters (U+3165--U+3186)
+    ///
+    /// The latter one range is considered valid if and only if `archaic-korean` feature is enabled.
+    ///
+    /// ## Via [`Jongseong`]
+    /// For the following rnage(s), the [`char`] given will be tried converting into [`Jongseong`] first, then subsequently into [`Choseong`]:
+    ///
+    /// * Hangul Jamo / Final consonants (U+11A8--U+11C2)
+    /// * Hangul Jamo / Old final consonants (U+11C3--U+11FF)
     /// * Hangul Jamo Extended-B / Old final consonants (U+D7CB--U+D7FB)
     ///
-    /// The latter three ranges are considered valid if and only if `archaic-korean` feature is enabled.
+    /// The latter two ranges are considered valid if and only if `archaic-korean` feature is enabled.
     ///
     /// # Errors
-    /// * [`Error::NonChoseongTryFromChar`]: the `char` given is not a valid initial consonant.
-    /// * [`Error::NonJaeumTryFromChar`]: the `char` given is not a valid consonant.
-    /// * [`Error::NonKoreanTryFromChar`]: the `char` given is not a valid Korean alphabet at all.
+    /// * [`Error::NonChoseongTryFromChar`]: the [`char`] given is not valid as initial consonant.
+    /// * [`Error::NonJaeumTryFromChar`]: the [`char`] given is not a valid consonant.
+    /// * [`Error::NonKoreanTryFromChar`]: the [`char`] given is not a valid Korean letter.
     fn try_from(value: char) -> Result<Self, Self::Error> {
         let code_point = value as u32;
+        let nacho = Err(Error::NonChoseongTryFromChar(value));
 
         match code_point {
-            0x1100..=0x1112 => return Ok(Choseong::try_from(code_point).unwrap()),
+            // initial consonants (self)
+            0x1100..=0x1112 => return Ok(Self::try_from(code_point).unwrap()),
+            // vowels
             0x1161..=0x1175
             | 0x314F..=0x3163
             | 0xFFC2..=0xFFC7
             | 0xFFCA..=0xFFCF
             | 0xFFD2..=0xFFD7
-            | 0xFFDA..=0xFFDC => return Err(Error::NonChoseongTryFromChar(value)),
-            0x11A8..=0x11C2 | 0x3131..=0x314E | 0xFFA1..=0xFFBE => {
-                return Ok(Choseong::try_from(Jaeum::try_from(value)?)?);
+            | 0xFFDA..=0xFFDC => return Err(Error::NonJaeumTryFromChar(value)),
+            // final consonants
+            0x11A8..=0x11C2 => {
+                return Self::try_from(Jongseong::try_from(code_point).unwrap()).or(nacho)
+            }
+            // generic consonants
+            0x3131..=0x314E => {
+                return Self::try_from(Jaeum::try_from(code_point).unwrap()).or(nacho)
+            }
+            // halfwidth consonants
+            0xFFA1..=0xFFBE => {
+                return Self::try_from(HalfwidthJaeum::try_from(code_point).unwrap()).or(nacho)
             }
             _ => {}
         }
 
         #[cfg(feature = "archaic-korean")]
         match code_point {
-            0x1113..=0x115E | 0xA960..=0xA97C => return Ok(Choseong::try_from(code_point).unwrap()),
+            // old initial consonants (self)
+            0x1113..=0x115E | 0xA960..=0xA97C => return Ok(Self::try_from(code_point).unwrap()),
+            // old vowels
             0x1176..=0x11A7 | 0x3187..=0x318E | 0xD7B0..=0xD7C6 => {
-                return Err(Error::NonChoseongTryFromChar(value))
+                return Err(Error::NonJaeumTryFromChar(value))
             }
-            0x11C3..=0x11FF | 0x3165..=0x3186 | 0xD7CB..=0xD7FB => {
-                return Ok(Choseong::try_from(Jaeum::try_from(value)?)?);
+            // old final consonants
+            0x11C3..=0x11FF | 0xD7CB..=0xD7FB => {
+                return Self::try_from(Jongseong::try_from(code_point).unwrap()).or(nacho)
+            }
+            // old generic consonants
+            0x3165..=0x3186 => {
+                return Self::try_from(Jaeum::try_from(code_point).unwrap()).or(nacho)
             }
             _ => {}
         }
@@ -431,103 +465,152 @@ impl TryFrom<char> for Choseong {
         Err(Error::NonKoreanTryFromChar(value))
     }
 }
+impl TryFrom<HalfwidthJaeum> for Choseong {
+    type Error = Error;
+
+    /// Tries to convert a [`HalfwidthJaeum`] into [`Choseong`].
+    ///
+    /// # Errors
+    /// * [`Error::NonChoseongTryFromHalfwidthJaeum`]: the [`HalfwidthJaeum`] given is not valid as initial consonant.
+    fn try_from(value: HalfwidthJaeum) -> Result<Self, Self::Error> {
+        // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
+        match value {
+            HalfwidthJaeum::Kiyeok => Ok(Self::Kiyeok),
+            HalfwidthJaeum::SsangKiyeok => Ok(Self::SsangKiyeok),
+            HalfwidthJaeum::Nieun => Ok(Self::Nieun),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::NieunCieuc => Ok(Self::NieunCieuc),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::NieunHieuh => Ok(Self::NieunHieuh),
+            HalfwidthJaeum::Tikeut => Ok(Self::Tikeut),
+            HalfwidthJaeum::SsangTikeut => Ok(Self::SsangTikeut),
+            HalfwidthJaeum::Rieul => Ok(Self::Rieul),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::RieulKiyeok => Ok(Self::RieulKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::RieulMieum => Ok(Self::RieulMieum),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::RieulPieup => Ok(Self::RieulPieup),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::RieulSios => Ok(Self::RieulSios),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::RieulHieuh => Ok(Self::RieulHieuh),
+            HalfwidthJaeum::Mieum => Ok(Self::Mieum),
+            HalfwidthJaeum::Pieup => Ok(Self::Pieup),
+            HalfwidthJaeum::SsangPieup => Ok(Self::SsangPieup),
+            #[cfg(feature = "archaic-korean")]
+            HalfwidthJaeum::PieupSios => Ok(Self::PieupSios),
+            HalfwidthJaeum::Sios => Ok(Self::Sios),
+            HalfwidthJaeum::SsangSios => Ok(Self::SsangSios),
+            HalfwidthJaeum::Ieung => Ok(Self::Ieung),
+            HalfwidthJaeum::Cieuc => Ok(Self::Cieuc),
+            HalfwidthJaeum::SsangCieuc => Ok(Self::SsangCieuc),
+            HalfwidthJaeum::Chieuch => Ok(Self::Chieuch),
+            HalfwidthJaeum::Khieukh => Ok(Self::Khieukh),
+            HalfwidthJaeum::Thieuth => Ok(Self::Thieuth),
+            HalfwidthJaeum::Phieuph => Ok(Self::Phieuph),
+            HalfwidthJaeum::Hieuh => Ok(Self::Hieuh),
+            _ => Err(Error::NonChoseongTryFromHalfwidthJaeum(value)),
+        }
+    }
+}
 impl TryFrom<Jaeum> for Choseong {
     type Error = Error;
 
-    /// Tries to convert a [`Jaeum`] into `Choseong`.
+    /// Tries to convert a [`Jaeum`] into [`Choseong`].
     ///
     /// # Errors
-    /// * [`Error::NonChoseongTryFromJaeum`]: the `Jaeum` given is not a valid initial consonant.
+    /// * [`Error::NonChoseongTryFromJaeum`]: the [`Jaeum`] given is not valid as initial consonant.
     fn try_from(value: Jaeum) -> Result<Self, Self::Error> {
         // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
         match value {
-            Jaeum::Kiyeok => Ok(Choseong::Kiyeok),
-            Jaeum::SsangKiyeok => Ok(Choseong::SsangKiyeok),
-            Jaeum::Nieun => Ok(Choseong::Nieun),
+            Jaeum::Kiyeok => Ok(Self::Kiyeok),
+            Jaeum::SsangKiyeok => Ok(Self::SsangKiyeok),
+            Jaeum::Nieun => Ok(Self::Nieun),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::NieunCieuc => Ok(Choseong::NieunCieuc),
+            Jaeum::NieunCieuc => Ok(Self::NieunCieuc),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::NieunHieuh => Ok(Choseong::NieunHieuh),
-            Jaeum::Tikeut => Ok(Choseong::Tikeut),
-            Jaeum::SsangTikeut => Ok(Choseong::SsangTikeut),
-            Jaeum::Rieul => Ok(Choseong::Rieul),
+            Jaeum::NieunHieuh => Ok(Self::NieunHieuh),
+            Jaeum::Tikeut => Ok(Self::Tikeut),
+            Jaeum::SsangTikeut => Ok(Self::SsangTikeut),
+            Jaeum::Rieul => Ok(Self::Rieul),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulKiyeok => Ok(Choseong::RieulKiyeok),
+            Jaeum::RieulKiyeok => Ok(Self::RieulKiyeok),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulMieum => Ok(Choseong::RieulMieum),
+            Jaeum::RieulMieum => Ok(Self::RieulMieum),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulPieup => Ok(Choseong::RieulPieup),
+            Jaeum::RieulPieup => Ok(Self::RieulPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulSios => Ok(Choseong::RieulSios),
+            Jaeum::RieulSios => Ok(Self::RieulSios),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulHieuh => Ok(Choseong::RieulHieuh),
-            Jaeum::Mieum => Ok(Choseong::Mieum),
-            Jaeum::Pieup => Ok(Choseong::Pieup),
-            Jaeum::SsangPieup => Ok(Choseong::SsangPieup),
+            Jaeum::RieulHieuh => Ok(Self::RieulHieuh),
+            Jaeum::Mieum => Ok(Self::Mieum),
+            Jaeum::Pieup => Ok(Self::Pieup),
+            Jaeum::SsangPieup => Ok(Self::SsangPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupSios => Ok(Choseong::PieupSios),
-            Jaeum::Sios => Ok(Choseong::Sios),
-            Jaeum::SsangSios => Ok(Choseong::SsangSios),
-            Jaeum::Ieung => Ok(Choseong::Ieung),
-            Jaeum::Cieuc => Ok(Choseong::Cieuc),
-            Jaeum::SsangCieuc => Ok(Choseong::SsangCieuc),
-            Jaeum::Chieuch => Ok(Choseong::Chieuch),
-            Jaeum::Khieukh => Ok(Choseong::Khieukh),
-            Jaeum::Thieuth => Ok(Choseong::Thieuth),
-            Jaeum::Phieuph => Ok(Choseong::Phieuph),
-            Jaeum::Hieuh => Ok(Choseong::Hieuh),
+            Jaeum::PieupSios => Ok(Self::PieupSios),
+            Jaeum::Sios => Ok(Self::Sios),
+            Jaeum::SsangSios => Ok(Self::SsangSios),
+            Jaeum::Ieung => Ok(Self::Ieung),
+            Jaeum::Cieuc => Ok(Self::Cieuc),
+            Jaeum::SsangCieuc => Ok(Self::SsangCieuc),
+            Jaeum::Chieuch => Ok(Self::Chieuch),
+            Jaeum::Khieukh => Ok(Self::Khieukh),
+            Jaeum::Thieuth => Ok(Self::Thieuth),
+            Jaeum::Phieuph => Ok(Self::Phieuph),
+            Jaeum::Hieuh => Ok(Self::Hieuh),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SsangNieun => Ok(Choseong::SsangNieun),
+            Jaeum::SsangNieun => Ok(Self::SsangNieun),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::NieunTikeut => Ok(Choseong::NieunTikeut),
+            Jaeum::NieunTikeut => Ok(Self::NieunTikeut),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::NieunSios => Ok(Choseong::NieunSios),
+            Jaeum::NieunSios => Ok(Self::NieunSios),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::RieulTikeut => Ok(Choseong::RieulTikeut),
+            Jaeum::RieulTikeut => Ok(Self::RieulTikeut),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::MieumPieup => Ok(Choseong::MieumPieup),
+            Jaeum::MieumPieup => Ok(Self::MieumPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::MieumSios => Ok(Choseong::MieumSios),
+            Jaeum::MieumSios => Ok(Self::MieumSios),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::KapyeounMieum => Ok(Choseong::KapyeounMieum),
+            Jaeum::KapyeounMieum => Ok(Self::KapyeounMieum),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupKiyeok => Ok(Choseong::PieupKiyeok),
+            Jaeum::PieupKiyeok => Ok(Self::PieupKiyeok),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupTikeut => Ok(Choseong::PieupTikeut),
+            Jaeum::PieupTikeut => Ok(Self::PieupTikeut),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupSiosKiyeok => Ok(Choseong::PieupSiosKiyeok),
+            Jaeum::PieupSiosKiyeok => Ok(Self::PieupSiosKiyeok),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupSiosTikeut => Ok(Choseong::PieupSiosTikeut),
+            Jaeum::PieupSiosTikeut => Ok(Self::PieupSiosTikeut),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupCieuc => Ok(Choseong::PieupCieuc),
+            Jaeum::PieupCieuc => Ok(Self::PieupCieuc),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PieupThieuth => Ok(Choseong::PieupThieuth),
+            Jaeum::PieupThieuth => Ok(Self::PieupThieuth),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::KapyeounPieup => Ok(Choseong::KapyeounPieup),
+            Jaeum::KapyeounPieup => Ok(Self::KapyeounPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::KapyeounSsangPieup => Ok(Choseong::KapyeounSsangPieup),
+            Jaeum::KapyeounSsangPieup => Ok(Self::KapyeounSsangPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SiosKiyeok => Ok(Choseong::SiosKiyeok),
+            Jaeum::SiosKiyeok => Ok(Self::SiosKiyeok),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SiosNieun => Ok(Choseong::SiosNieun),
+            Jaeum::SiosNieun => Ok(Self::SiosNieun),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SiosTikeut => Ok(Choseong::SiosTikeut),
+            Jaeum::SiosTikeut => Ok(Self::SiosTikeut),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SiosPieup => Ok(Choseong::SiosPieup),
+            Jaeum::SiosPieup => Ok(Self::SiosPieup),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SiosCieuc => Ok(Choseong::SiosCieuc),
+            Jaeum::SiosCieuc => Ok(Self::SiosCieuc),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::PanSios => Ok(Choseong::PanSios),
+            Jaeum::PanSios => Ok(Self::PanSios),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SsangIeung => Ok(Choseong::SsangIeung),
+            Jaeum::SsangIeung => Ok(Self::SsangIeung),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::YesIeung => Ok(Choseong::YesIeung),
+            Jaeum::YesIeung => Ok(Self::YesIeung),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::KapyeounPhieuph => Ok(Choseong::KapyeounPhieuph),
+            Jaeum::KapyeounPhieuph => Ok(Self::KapyeounPhieuph),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::SsangHieuh => Ok(Choseong::SsangHieuh),
+            Jaeum::SsangHieuh => Ok(Self::SsangHieuh),
             #[cfg(feature = "archaic-korean")]
-            Jaeum::YeorinHieuh => Ok(Choseong::YeorinHieuh),
+            Jaeum::YeorinHieuh => Ok(Self::YeorinHieuh),
             _ => Err(Error::NonChoseongTryFromJaeum(value)),
         }
     }
@@ -535,251 +618,370 @@ impl TryFrom<Jaeum> for Choseong {
 impl TryFrom<Jongseong> for Choseong {
     type Error = Error;
 
-    /// Tries to convert a [`Jongseong`] into `Choseong`, by leveraging existing conversion between `Jongseong` and [`Jaeum`], and between `Jaeum` and `Choseong`.
-    ///
-    /// Note: whether all `Choseong`-capable `Jongseong` successfully converts to `Choseong` or not has not yet been fully tested, thus consider this function **unstable**.
+    /// Tries to convert a [`Jongseong`] into [`Choseong`].
     ///
     /// # Errors
-    /// * [`Error::NonChoseongTryFromJaeum`]: the **`Jongseong`** (actually, a `Jaeum`-ized `Jongseong`) given is not valid in initial consonant position.
-    /// * [`Error::NonUnicodeJaeumTryFromJongseong`]: side effect from the approach this function took; until the conversion is fully validated, this error shall serve as a logical assertion.
+    /// * [`Error::NonChoseongTryFromJongseong`]: the [`Jongseong`] given is not valid as initial consonant.
     fn try_from(value: Jongseong) -> Result<Self, Self::Error> {
-        Self::try_from(Jaeum::try_from(value)?)
+        // TODO: consider switching to bst; but i'm not very sure of performance boost it'll yield.
+        match value {
+            Jongseong::Kiyeok => Ok(Self::Kiyeok),
+            Jongseong::SsangKiyeok => Ok(Self::SsangKiyeok),
+            Jongseong::Nieun => Ok(Self::Nieun),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::NieunKiyeok => Ok(Self::NieunKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SsangNieun => Ok(Self::SsangNieun),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::NieunTikeut => Ok(Self::NieunTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::NieunSios => Ok(Self::NieunSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::NieunCieuc => Ok(Self::NieunCieuc),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::NieunHieuh => Ok(Self::NieunHieuh),
+            Jongseong::Tikeut => Ok(Self::Tikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::TikeutKiyeok => Ok(Self::TikeutKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SsangTikeut => Ok(Self::SsangTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::TikeutRieul => Ok(Self::TikeutRieul),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::TikeutPieup => Ok(Self::TikeutPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::TikeutSios => Ok(Self::TikeutSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::TikeutCieuc => Ok(Self::TikeutCieuc),
+            Jongseong::Rieul => Ok(Self::Rieul),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulKiyeok => Ok(Self::RieulKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulSsangKiyeok => Ok(Self::RieulSsangKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulNieun => Ok(Self::RieulNieun),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulTikeut => Ok(Self::RieulTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SsangRieul => Ok(Self::SsangRieul),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulMieum => Ok(Self::RieulMieum),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulPieup => Ok(Self::RieulPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulKapyeounPieup => Ok(Self::RieulKapyeounPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulSios => Ok(Self::RieulSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulKhieukh => Ok(Self::RieulKhieukh),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::RieulHieuh => Ok(Self::RieulHieuh),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::KapyeounRieul => Ok(Self::KapyeounRieul),
+            Jongseong::Mieum => Ok(Self::Mieum),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::MieumKiyeok => Ok(Self::MieumKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::MieumPieup => Ok(Self::MieumPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::MieumSios => Ok(Self::MieumSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::KapyeounMieum => Ok(Self::KapyeounMieum),
+            Jongseong::Pieup => Ok(Self::Pieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupTikeut => Ok(Self::PieupTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SsangPieup => Ok(Self::SsangPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupSios => Ok(Self::PieupSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupSiosTikeut => Ok(Self::PieupSiosTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupCieuc => Ok(Self::PieupCieuc),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupChieuch => Ok(Self::PieupChieuch),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupPhieuph => Ok(Self::PieupPhieuph),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PieupHieuh => Ok(Self::PieupHieuh),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::KapyeounPieup => Ok(Self::KapyeounPieup),
+            Jongseong::Sios => Ok(Self::Sios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosKiyeok => Ok(Self::SiosKiyeok),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosTikeut => Ok(Self::SiosTikeut),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosRieul => Ok(Self::SiosRieul),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosMieum => Ok(Self::SiosMieum),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosPieup => Ok(Self::SiosPieup),
+            Jongseong::SsangSios => Ok(Self::SsangSios),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosCieuc => Ok(Self::SiosCieuc),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosChieuch => Ok(Self::SiosChieuch),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosThieuth => Ok(Self::SiosThieuth),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SiosHieuh => Ok(Self::SiosHieuh),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PanSios => Ok(Self::PanSios),
+            Jongseong::Ieung => Ok(Self::Ieung),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::YesIeung => Ok(Self::YesIeung),
+            Jongseong::Cieuc => Ok(Self::Cieuc),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::SsangCieuc => Ok(Self::SsangCieuc),
+            Jongseong::Chieuch => Ok(Self::Chieuch),
+            Jongseong::Khieukh => Ok(Self::Khieukh),
+            Jongseong::Thieuth => Ok(Self::Thieuth),
+            Jongseong::Phieuph => Ok(Self::Phieuph),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::PhieuphPieup => Ok(Self::PhieuphPieup),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::KapyeounPhieuph => Ok(Self::KapyeounPhieuph),
+            Jongseong::Hieuh => Ok(Self::Hieuh),
+            #[cfg(feature = "archaic-korean")]
+            Jongseong::YeorinHieuh => Ok(Self::YeorinHieuh),
+            _ => Err(Error::NonChoseongTryFromJongseong(value)),
+        }
     }
 }
 impl Choseong {
-    // TODO: consider exporting this array even when `archaic-korean` feature is not selected.
-    //       prob will require getting enum size at compile time kind of special magic thing.
+    // This list is only exported with `archaic-korean` feature, because without it the [`Choseong`] should be in order by itself.
     #[cfg(feature = "archaic-korean")]
-    /// Lists `Choseong` in correct dictionary order.
-    pub const IN_ORDER: [Choseong; 124] = [
-        Choseong::Kiyeok,
-        Choseong::SsangKiyeok,
+    /// Lists [`Choseong`] in correct dictionary order.
+    pub const IN_ORDER: [Self; 124] = [
+        Self::Kiyeok,
+        Self::SsangKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KiyeokTikeut,
-        Choseong::Nieun,
+        Self::KiyeokTikeut,
+        Self::Nieun,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunKiyeok,
+        Self::NieunKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangNieun,
+        Self::SsangNieun,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunTikeut,
+        Self::NieunTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunPieup,
+        Self::NieunPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunSios,
+        Self::NieunSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunCieuc,
+        Self::NieunCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::NieunHieuh,
-        Choseong::Tikeut,
+        Self::NieunHieuh,
+        Self::Tikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutKiyeok,
-        Choseong::SsangTikeut,
+        Self::TikeutKiyeok,
+        Self::SsangTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutRieul,
+        Self::TikeutRieul,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutMieum,
+        Self::TikeutMieum,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutPieup,
+        Self::TikeutPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutSios,
+        Self::TikeutSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::TikeutCieuc,
-        Choseong::Rieul,
+        Self::TikeutCieuc,
+        Self::Rieul,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulKiyeok,
+        Self::RieulKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulSsangKiyeok,
+        Self::RieulSsangKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulNieun,
+        Self::RieulNieun,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulTikeut,
+        Self::RieulTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulSsangTikeut,
+        Self::RieulSsangTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangRieul,
+        Self::SsangRieul,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulMieum,
+        Self::RieulMieum,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulPieup,
+        Self::RieulPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulSsangPieup,
+        Self::RieulSsangPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulKapyeounPieup,
+        Self::RieulKapyeounPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulSios,
+        Self::RieulSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulCieuc,
+        Self::RieulCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulKhieukh,
+        Self::RieulKhieukh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::RieulHieuh,
+        Self::RieulHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KapyeounRieul,
-        Choseong::Mieum,
+        Self::KapyeounRieul,
+        Self::Mieum,
         #[cfg(feature = "archaic-korean")]
-        Choseong::MieumKiyeok,
+        Self::MieumKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::MieumTikeut,
+        Self::MieumTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::MieumPieup,
+        Self::MieumPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::MieumSios,
+        Self::MieumSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KapyeounMieum,
-        Choseong::Pieup,
+        Self::KapyeounMieum,
+        Self::Pieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupKiyeok,
+        Self::PieupKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupNieun,
+        Self::PieupNieun,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupTikeut,
-        Choseong::SsangPieup,
+        Self::PieupTikeut,
+        Self::SsangPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSios,
+        Self::PieupSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSiosKiyeok,
+        Self::PieupSiosKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSiosTikeut,
+        Self::PieupSiosTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSiosPieup,
+        Self::PieupSiosPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSsangSios,
+        Self::PieupSsangSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSiosCieuc,
+        Self::PieupSiosCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupSiosThieuth,
+        Self::PieupSiosThieuth,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupCieuc,
+        Self::PieupCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupChieuch,
+        Self::PieupChieuch,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupKhieukh,
+        Self::PieupKhieukh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupThieuth,
+        Self::PieupThieuth,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupPhieuph,
+        Self::PieupPhieuph,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PieupHieuh,
+        Self::PieupHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KapyeounPieup,
+        Self::KapyeounPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KapyeounSsangPieup,
-        Choseong::Sios,
+        Self::KapyeounSsangPieup,
+        Self::Sios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosKiyeok,
+        Self::SiosKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosNieun,
+        Self::SiosNieun,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosTikeut,
+        Self::SiosTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosRieul,
+        Self::SiosRieul,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosMieum,
+        Self::SiosMieum,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosPieup,
+        Self::SiosPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosPieupKiyeok,
-        Choseong::SsangSios,
+        Self::SiosPieupKiyeok,
+        Self::SsangSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangSiosPieup,
+        Self::SsangSiosPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosSsangSios,
+        Self::SiosSsangSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosIeung,
+        Self::SiosIeung,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosCieuc,
+        Self::SiosCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosChieuch,
+        Self::SiosChieuch,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosKhieukh,
+        Self::SiosKhieukh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosThieuth,
+        Self::SiosThieuth,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosPhieuph,
+        Self::SiosPhieuph,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SiosHieuh,
+        Self::SiosHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChitueumSios,
+        Self::ChitueumSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChitueumSsangSios,
+        Self::ChitueumSsangSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CeongchieumSios,
+        Self::CeongchieumSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CeongchieumSsangSios,
+        Self::CeongchieumSsangSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PanSios,
-        Choseong::Ieung,
+        Self::PanSios,
+        Self::Ieung,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungKiyeok,
+        Self::IeungKiyeok,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungTikeut,
+        Self::IeungTikeut,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungRieul,
+        Self::IeungRieul,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungMieum,
+        Self::IeungMieum,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungPieup,
+        Self::IeungPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungSios,
+        Self::IeungSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungPanSios,
+        Self::IeungPanSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangIeung,
+        Self::SsangIeung,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungCieuc,
+        Self::IeungCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungChieuch,
+        Self::IeungChieuch,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungThieuth,
+        Self::IeungThieuth,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungPhieuph,
+        Self::IeungPhieuph,
         #[cfg(feature = "archaic-korean")]
-        Choseong::IeungHieuh,
+        Self::IeungHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::YesIeung,
-        Choseong::Cieuc,
+        Self::YesIeung,
+        Self::Cieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CieucIeung,
-        Choseong::SsangCieuc,
+        Self::CieucIeung,
+        Self::SsangCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangCieucHieuh,
+        Self::SsangCieucHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChitueumCieuc,
+        Self::ChitueumCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChitueumSsangCieuc,
+        Self::ChitueumSsangCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CeongchieumCieuc,
+        Self::CeongchieumCieuc,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CeongchieumSsangCieuc,
-        Choseong::Chieuch,
+        Self::CeongchieumSsangCieuc,
+        Self::Chieuch,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChieuchKhieukh,
+        Self::ChieuchKhieukh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChieuchHieuh,
+        Self::ChieuchHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::ChitueumChieuch,
+        Self::ChitueumChieuch,
         #[cfg(feature = "archaic-korean")]
-        Choseong::CeongchieumChieuch,
-        Choseong::Khieukh,
-        Choseong::Thieuth,
+        Self::CeongchieumChieuch,
+        Self::Khieukh,
+        Self::Thieuth,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangThieuth,
-        Choseong::Phieuph,
+        Self::SsangThieuth,
+        Self::Phieuph,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PhieuphPieup,
+        Self::PhieuphPieup,
         #[cfg(feature = "archaic-korean")]
-        Choseong::PhieuphHieuh,
+        Self::PhieuphHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::KapyeounPhieuph,
-        Choseong::Hieuh,
+        Self::KapyeounPhieuph,
+        Self::Hieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::HieuhSios,
+        Self::HieuhSios,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangHieuh,
+        Self::SsangHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::YeorinHieuh,
+        Self::YeorinHieuh,
         #[cfg(feature = "archaic-korean")]
-        Choseong::SsangYeorinHieuh,
+        Self::SsangYeorinHieuh,
     ];
 }

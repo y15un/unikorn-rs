@@ -1,4 +1,4 @@
-//! A collection of types representing consonants (자음, Jaeum) of modern Korean alphabets.
+//! A collection of types representing consonants (자음, Jaeum) of modern Korean letters.
 //!
 //! # Backgrounds
 //! A typical Korean syllable is composed of the three components: initial consonant (초성, Choseong), median vowel (중성, Jungseong), and final consonant (종성, Jongseong).
@@ -28,8 +28,11 @@
 //! This library supports such mechanism with `archaic-korean` feature, but with known limitation. While *the* principle allows any arbitrary combinations, due to the policy in adding new characters to Unicode, only consonant sequences explicitly observed of their existence are available in Unicode and are supported.
 
 mod choseong;
+mod halfwidth;
 mod jaeum;
 mod jongseong;
 
 #[doc(inline)]
-pub use crate::consonant::{choseong::Choseong, jaeum::Jaeum, jongseong::Jongseong};
+pub use crate::consonant::{
+    choseong::Choseong, halfwidth::HalfwidthJaeum, jaeum::Jaeum, jongseong::Jongseong,
+};
